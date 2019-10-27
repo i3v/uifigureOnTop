@@ -1,21 +1,22 @@
-function wasOnTop = WinOnTop( figureHandle, isOnTop )
-%WINONTOP allows to trigger figure's "Always On Top" state
+function wasOnTop = uifigureOnTop( uifig, isOnTop )
+%UIFIGUREONTOP allows to trigger uifigure's "Always On Top" state
 %
 %% INPUT ARGUMENTS:
 %
-% # figureHandle - Matlab's figure handle, scalar
-% # isOnTop      - logical scalar or empty array
+% * uifig    - Matlab uifigure handle, scalar
+% * isOnTop  - logical scalar or empty array
 %
 %
 %% USAGE:
 %
-% * WinOnTop( hfigure, true );      - switch on  "always on top"
-% * WinOnTop( hfigure, false );     - switch off "always on top"
-% * WinOnTop( hfigure );            - equal to WinOnTop( hfigure,true);
-% * WinOnTop();                     - equal to WinOnTop( gcf, true);
-% * WasOnTop = WinOnTop(...);       - returns boolean value "if figure WAS on top"
-% * isOnTop = WinOnTop(hfigure,[])  - get "if figure is on top" property
+% * uifigureOnTop(uifigure, true);   - switch on  "always on top"
+% * uifigureOnTop(uifigure, false);  - switch off "always on top"
+% * uifigureOnTop(uifigure);         - equal to uifigureOnTop( uifigure,true);
+% * WasOnTop = uifigureOnTop(...);        - returns boolean value "if figure WAS on top"
+% * isOnTop = uifigureOnTop(uifigure,[])  - get "if figure is on top" property
 %
+% For Matlab windows, created via `hf=figure()` use `WinOnTop()`, see: 
+% https://www.mathworks.com/matlabcentral/fileexchange/42252-winontop
 %
 %% LIMITATIONS:
 %
@@ -25,37 +26,32 @@ function wasOnTop = WinOnTop( figureHandle, isOnTop )
 % * figureHandle should not be casted to double, if using HG2 (R2014b+)
 %
 %
-% Written by Igor
+% Based on https://undocumentedmatlab.com/blog/customizing-uifigures-part-1
+% Written by Igor.
 % i3v@mail.ru
 %
-% 2013.06.16 - Initial version
-% 2013.06.27 - removed custom "ishandle_scalar" function call
-% 2015.04.17 - adapted for changes in matlab graphics system (since R2014b)
-% 2016.05.21 - another ishg2() checking mechanism 
-% 2016.09.24 - fixed IsOnTop vs isOnTop bug
+% 2019.10.27 - Initial version
+
 
 %% Parse Inputs
 
-if ~exist('figureHandle','var'); figureHandle = gcf; end
-
 assert(...
-          isscalar(  figureHandle ) &&...
-          ishandle(  figureHandle ) &&...
-          strcmp(get(figureHandle,'Type'),'figure'),...
+          isscalar(  uifig ) &&...
+          isa( uifig,'matlab.ui.Figure'),...
           ...
-          'WinOnTop:Bad_figureHandle_input',...
-          '%s','Provided figureHandle input is not a figure handle'...
+          'uifigureOnTop:Bad_uifig_input',...
+          '%s','Provided uifig input is not an uifigure'...
        );
 
 assert(...
-            strcmp('on',get(figureHandle,'Visible')),...
-            'WinOnTop:FigInisible',...
+            strcmp('on',get(uifig,'Visible')),...
+            'uifigureOnTop:FigInisible',...
             '%s','Figure Must be Visible'...
        );
 
 assert(...
-            strcmp('normal',get(figureHandle,'WindowStyle')),...
-            'WinOnTop:FigWrongWindowStyle',...
+            strcmp('normal',get(uifig,'WindowStyle')),...
+            'uifigureOnTop:FigWrongWindowStyle',...
             '%s','WindowStyle Must be Normal'...
        );
    
@@ -66,58 +62,65 @@ assert(...
           isscalar(  isOnTop ) || ...
           isempty(   isOnTop ),  ...
           ...
-          'WinOnTop:Bad_isOnTop_input',...
+          'uifigureOnTop:Bad_isOnTop_input',...
           '%s','Provided isOnTop input is neither boolean, nor empty'...
       );
-  
-  
-%% Pre-checks
 
-error(javachk('swing',mfilename)) % Swing components must be available.
-  
-  
-%% Action
-
-% Flush the Event Queue of Graphic Objects and Update the Figure Window.
+%% Flush the Event Queue of Graphic Objects and Update the Figure Window.
 drawnow expose
+  
+%% Disable warnings and dig into uifigure object
+% Using undocumented private properties is the only(?) way through.
 
-warnStruct=warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
-jFrame = get(handle(figureHandle),'JavaFrame');
-warning(warnStruct.state,'MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+% Warning 1:
+%    -----
+%    Warning: figure JavaFrame property will be obsoleted in a future 
+%    release. <...>
+%    -----
 
-drawnow
+warn1_id = 'MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame';
+prev_warn1 = warning('query',warn1_id);
+clnup1=onCleanup(@() warning(prev_warn1.state,warn1_id));
+warning('off',warn1_id);
+
+% Warning 2:
+%    -----
+%    Warning: Calling STRUCT on an object prevents the object from hiding
+%    its implementation details <...>
+%    -----
+warn2_id = 'MATLAB:structOnObject';
+prev_warn2 = warning('query',warn2_id);
+clnup2=onCleanup(@() warning(prev_warn2.state,warn2_id));
+warning('off',warn2_id);
 
 
-if ishg2(figureHandle)
-    jFrame_fHGxClient = jFrame.fHG2Client;
+figProps = struct(uifig); 
+delete(clnup1);    
+
+
+controller = figProps.Controller; 
+controllerProps = struct(controller);
+
+if isfield(controllerProps,'Container')
+    % older Matlab versions (see Yair's version)
+    container = controllerProps.Container;
 else
-    jFrame_fHGxClient = jFrame.fHG1Client;
+    % works in R2018b
+    container = struct(controllerProps.PlatformHost);
 end
+delete(clnup2);
 
+%% Action
+win = container.CEF;
+wasOnTop = win.isAlwaysOnTop;
 
-wasOnTop = jFrame_fHGxClient.getWindow.isAlwaysOnTop;
+if isempty(wasOnTop)
+    wasOnTop = false;
+end
 
 if ~isempty(isOnTop)
-    jFrame_fHGxClient.getWindow.setAlwaysOnTop(isOnTop);
+    win.setAlwaysOnTop(isOnTop);
 end
 
 end
 
-
-function tf = ishg2(figureHandle)
-% There's a detailed discussion, how to check "if using HG2" here:
-% http://www.mathworks.com/matlabcentral/answers/136834-determine-if-using-hg2
-% however, it looks like there's no perfect solution.
-%
-% This approach, suggested by Cris Luengo:
-% http://www.mathworks.com/matlabcentral/answers/136834#answer_156739
-% should work OK, assuming user is NOT passing a figure handle, casted to
-% double, like this:
-%
-%   hf=figure();
-%   WinOnTop(double(hf));
-%
-
-tf = isa(figureHandle,'matlab.ui.Figure');
-
-end

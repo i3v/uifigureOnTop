@@ -1,9 +1,10 @@
-function  demo_WinOnTop(  )
-%DEMO_WINONTOP is a simple test of WinOnTop function functionality
+function  demo_uifigureOnTop(  )
+%DEMO_UIFIGUREONTOP is a simple test of uifigureOnTop function functionality
 %
 
-hf=figure();
-WinOnTop(hf);
+uifig=uifigure('Name','demo uifigure (should be always on top)');
+
+uifigureOnTop(uifig);
 
 end
 
