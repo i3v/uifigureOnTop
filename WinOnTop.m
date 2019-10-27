@@ -4,7 +4,7 @@ function wasOnTop = WinOnTop( figureHandle, isOnTop )
 %% INPUT ARGUMENTS:
 %
 % # figureHandle - Matlab's figure handle, scalar
-% # IsOnTop      - logical scalar or empty array
+% # isOnTop      - logical scalar or empty array
 %
 %
 %% USAGE:
@@ -14,7 +14,7 @@ function wasOnTop = WinOnTop( figureHandle, isOnTop )
 % * WinOnTop( hfigure );            - equal to WinOnTop( hfigure,true);
 % * WinOnTop();                     - equal to WinOnTop( gcf, true);
 % * WasOnTop = WinOnTop(...);       - returns boolean value "if figure WAS on top"
-% * IsOnTop = WinOnTop(hfigure,[])  - get "if figure is on top" property
+% * isOnTop = WinOnTop(hfigure,[])  - get "if figure is on top" property
 %
 %
 %% LIMITATIONS:
@@ -32,6 +32,7 @@ function wasOnTop = WinOnTop( figureHandle, isOnTop )
 % 2013.06.27 - removed custom "ishandle_scalar" function call
 % 2015.04.17 - adapted for changes in matlab graphics system (since R2014b)
 % 2016.05.21 - another ishg2() checking mechanism 
+% 2016.09.24 - fixed IsOnTop vs isOnTop bug
 
 %% Parse Inputs
 
@@ -58,15 +59,15 @@ assert(...
             '%s','WindowStyle Must be Normal'...
        );
    
-if ~exist('IsOnTop','var'); isOnTop=true; end
+if ~exist('isOnTop','var'); isOnTop=true; end
 
 assert(...
           islogical( isOnTop ) && ...
           isscalar(  isOnTop ) || ...
           isempty(   isOnTop ),  ...
           ...
-          'WinOnTop:Bad_IsOnTop_input',...
-          '%s','Provided IsOnTop input is neither boolean, nor empty'...
+          'WinOnTop:Bad_isOnTop_input',...
+          '%s','Provided isOnTop input is neither boolean, nor empty'...
       );
   
   
