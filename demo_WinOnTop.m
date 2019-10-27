@@ -1,5 +1,5 @@
-function  test_WinOnTop(  )
-%TEST_WINONTOP is a simple test of WinOnTop function functionality
+function  demo_WinOnTop(  )
+%DEMO_WINONTOP is a simple test of WinOnTop function functionality
 %
 
 hf=figure();
