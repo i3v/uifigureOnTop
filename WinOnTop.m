@@ -21,14 +21,14 @@ function WasOnTop = WinOnTop( FigureHandle, IsOnTop )
 % i3v@mail.ru
 %
 % 16 June 2013 - Initial version
-%
+% 27 June 2013 - removed custom "ishandle_scalar" function call
 %
 
 %% Parse Inputs
 
 if ~exist('FigureHandle','var');FigureHandle = gcf; end
 assert(...
-          ishandle_scalar( FigureHandle ) &&  strcmp(get(FigureHandle,'Type'),'figure'),...
+          isscalar( FigureHandle ) && ishandle( FigureHandle ) &&  strcmp(get(FigureHandle,'Type'),'figure'),...
           'WinOnTop:Bad_FigureHandle_input',...
           '%s','Provided FigureHandle input is not a figure handle'...
        );
@@ -61,7 +61,9 @@ error(javachk('swing',mfilename)) % Swing components must be available.
 % Flush the Event Queue of Graphic Objects and Update the Figure Window.
 drawnow expose
 
-jFrame = get(handle(gcf),'JavaFrame');
+jFrame = get(handle(FigureHandle),'JavaFrame');
+
+drawnow
 
 WasOnTop = jFrame.fHG1Client.getWindow.isAlwaysOnTop;
 
